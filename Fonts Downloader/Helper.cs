@@ -50,10 +50,30 @@ namespace Fonts_Downloader
             if (string.IsNullOrEmpty(fontName) || string.IsNullOrEmpty(weight))
                 return string.Empty;
 
-            var fontFileStyle = GetFontFileStyles(MapVariant(weight).Replace(" italic", "").Replace("italic", ""));
-            var fontStyle = weight.Contains("italic") ? "italic" : "normal";
-            var format = woff2 ? "woff2" : "ttf";
-            return $"{fontName.Replace(" ", "")}-{char.ToUpper(fontStyle[0]) + fontStyle[1..]}-{fontFileStyle}.{format}";
+            // Check if weight contains italic
+            bool isItalic = weight.Contains("italic");
+
+            // Get numeric weight (remove italic and clean up)
+            string numericWeight = MapVariant(weight).Replace(" italic", "").Replace("italic", "");
+
+            // Get weight style name (like Regular, Bold, etc.)
+            string weightName = "Regular";
+            if (FontWeights.TryGetValue(numericWeight, out string value))
+            {
+                weightName = value;
+            }
+
+            // Format: FontName-WeightName.ttf or FontName-WeightNameItalic.ttf
+            string format = woff2 ? "woff2" : "ttf";
+
+            if (isItalic)
+            {
+                return $"{fontName.Replace(" ", "")}-{weightName}Italic.{format}";
+            }
+            else
+            {
+                return $"{fontName.Replace(" ", "")}-{weightName}.{format}";
+            }
         }
 
         public static async Task<bool> IsNetworkAvailableAsync()

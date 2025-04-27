@@ -22,7 +22,6 @@ namespace Fonts_Downloader
                 var logMessage = CreateLogMessage(userMessage, ex);
                 await AppendLogToFileAsync(logMessage);
 
-                // Don't show dialog for minor issues
                 if (!string.IsNullOrEmpty(userMessage) &&
                     !userMessage.Contains("Network check") &&
                     !userMessage.Contains("Download link is empty") &&
@@ -38,7 +37,6 @@ namespace Fonts_Downloader
             }
             catch (Exception logEx)
             {
-                // Last resort if logging fails
                 Debug.WriteLine($"Logging failed: {logEx.Message}");
                 try
                 {
@@ -49,7 +47,6 @@ namespace Fonts_Downloader
                 }
                 catch
                 {
-                    // Nothing more we can do
                 }
             }
         }
@@ -65,7 +62,6 @@ namespace Fonts_Downloader
             }
             catch (Exception logEx)
             {
-                // Last resort if logging fails
                 Debug.WriteLine($"Logging failed: {logEx.Message}");
                 try
                 {
@@ -76,7 +72,7 @@ namespace Fonts_Downloader
                 }
                 catch
                 {
-                    // Nothing more we can do
+
                 }
             }
         }
@@ -104,7 +100,6 @@ namespace Fonts_Downloader
             {
                 var logEntries = new List<LogMessage>();
 
-                // Read existing logs
                 if (File.Exists(LogFilePath))
                 {
                     var existingLogs = await File.ReadAllTextAsync(LogFilePath);
@@ -151,16 +146,14 @@ namespace Fonts_Downloader
                         }
                     }
 
-                    // Add the new log entry
                     logEntries.Add(logMessage);
 
-                    // Keep only the most recent 100 logs to prevent the file from growing too large
+                    
                     if (logEntries.Count > 100)
                     {
-                        logEntries = logEntries.OrderByDescending(l => l.EpochMs).Take(100).ToList();
+                        logEntries = [.. logEntries.OrderByDescending(l => l.EpochMs).Take(100)];
                     }
 
-                    // Write back to the file
                     var json = JsonSerializer.Serialize(logEntries, new JsonSerializerOptions { WriteIndented = true });
                     File.WriteAllText(LogFilePath, json);
                 }
@@ -177,7 +170,7 @@ namespace Fonts_Downloader
             {
                 if (!File.Exists(LogFilePath))
                 {
-                    return Enumerable.Empty<LogMessage>();
+                    return [];
                 }
 
                 var logContent = await File.ReadAllTextAsync(LogFilePath);
@@ -187,7 +180,7 @@ namespace Fonts_Downloader
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error reading logs: {ex.Message}");
-                return Enumerable.Empty<LogMessage>();
+                return [];
             }
         }
 

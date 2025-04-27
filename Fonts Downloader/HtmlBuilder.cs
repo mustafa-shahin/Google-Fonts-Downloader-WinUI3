@@ -14,7 +14,7 @@ namespace Fonts_Downloader
         private const string LoremIpsum = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua";
         private const string GoogleFontLinkTemplate = "<link href=\"https://fonts.googleapis.com/css2?family={0}:{1}&display=swap\" rel=\"stylesheet\">";
 
-        public void DefaultHtml(bool isConnected = false, WebFontsService fonts = null)
+        public void DefaultHtml(bool isConnected = false, WebFontsService? fonts = null)
         {
             var css = new CssStyle();
             var messageBuilder = new StringBuilder();
@@ -139,7 +139,6 @@ namespace Fonts_Downloader
             var htmlElements = new List<HtmlElements>();
             var counter = 0;
 
-            // List of colors to cycle through
             var Colors = new List<string> {
                 "#005B41", "#1E5128", "#144272", "#1F6E8C", "#5C8374",
                 "#183D3D", "#03C988", "#77B0AA", "#A12568", "#3B185F",
@@ -266,101 +265,5 @@ namespace Fonts_Downloader
                 </body>
                 </html>";
         }
-    }
-
-    // HTML Element Classes
-    public abstract class HtmlElements
-    {
-        public string Class { get; set; }
-        public string Style { get; set; }
-        public string Text { get; set; }
-        public List<HtmlElements> Children { get; set; } = new();
-
-        protected string RenderAttributes()
-        {
-            var attributes = new StringBuilder();
-            if (!string.IsNullOrEmpty(Class))
-                attributes.Append($" class='{Class}'");
-
-            if (!string.IsNullOrEmpty(Style))
-                attributes.Append($" style='{Style}'");
-
-            return attributes.ToString();
-        }
-
-        public abstract string RenderElement();
-    }
-
-    public class Div : HtmlElements
-    {
-        public string Id { get; set; }
-
-        public override string RenderElement()
-        {
-            var attributes = new StringBuilder(RenderAttributes());
-            if (!string.IsNullOrEmpty(Id))
-                attributes.Append($" id='{Id}'");
-
-            var childrenHtml = string.Join("", Children.Select(c => c.RenderElement()));
-            return $"<div{attributes}>{childrenHtml}</div>";
-        }
-    }
-
-    public class Paragraph : HtmlElements
-    {
-        public override string RenderElement()
-        {
-            return $"<p{RenderAttributes()}>{Text}</p>";
-        }
-    }
-
-    public class Header : HtmlElements
-    {
-        private int _level;
-
-        public int Level
-        {
-            get => _level;
-            set
-            {
-                if (value < 1 || value > 6)
-                    throw new ArgumentOutOfRangeException(nameof(Level), "Header level must be between 1 and 6.");
-                _level = value;
-            }
-        }
-
-        public Header(int level)
-        {
-            Level = level;
-        }
-
-        public override string RenderElement()
-        {
-            return $"<h{Level}{RenderAttributes()}>{Text}</h{Level}>";
-        }
-    }
-
-    public class Anchor : HtmlElements
-    {
-        public string Href { get; set; }
-        public string Target { get; set; }
-        public string Rel { get; set; }
-
-        public override string RenderElement()
-        {
-            if (string.IsNullOrEmpty(Href))
-                throw new InvalidOperationException("Href cannot be null or empty for an anchor element.");
-
-            var attributes = new StringBuilder(RenderAttributes());
-            attributes.Append($" href='{Href}'");
-
-            if (!string.IsNullOrEmpty(Target))
-                attributes.Append($" target='{Target}'");
-
-            if (!string.IsNullOrEmpty(Rel))
-                attributes.Append($" rel='{Rel}'");
-
-            return $"<a{attributes}>{Text}</a>";
-        }
-    }
+    }  
 }

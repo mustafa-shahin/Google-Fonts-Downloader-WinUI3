@@ -2,21 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using System.Threading.Tasks;
 using Windows.Storage.Pickers;
 using Windows.Storage;
 using Windows.System;
-using WinRT.Interop;
 using WinRT.Interop;
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -42,8 +34,6 @@ namespace Fonts_Downloader
         {
             this.InitializeComponent();
 
-
-            // Initialize services
             _htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FontsWebView.html");
             _htmlBuilder = new HtmlBuilder();
             _fontSelector = new FontSelector(_htmlBuilder);
@@ -52,7 +42,7 @@ namespace Fonts_Downloader
             SetupControls();
             InitializeWebView();
             CheckInternetConnection();
-            LoadApiKey();
+            LoadApiKeyAndInitiateLoad();
         }
 
         private void SetupControls()
@@ -68,10 +58,19 @@ namespace Fonts_Downloader
             FontVariantsLabel.Visibility = Visibility.Collapsed;
             FontVariantsListView.Visibility = Visibility.Collapsed;
 
+
+            FontVariantsListView.SelectionChanged += FontVariantsListView_SelectionChanged; 
+
             // Setup default download folder
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             FolderName = Path.Combine(desktopPath, "GoogleFonts");
             SelectedFolderTextBox.Text = FolderName;
+        }
+
+        // Add this event handler to update the download button state
+        private void FontVariantsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateDownloadButtonState();
         }
 
         private void InitializeWebView()
@@ -125,18 +124,101 @@ namespace Fonts_Downloader
             }
         }
 
-        private void LoadApiKey()
+        private async void LoadApiKeyAndInitiateLoad()
         {
             string apiKey = Helper.GetAPIKey();
             if (!string.IsNullOrEmpty(apiKey))
             {
                 ApiKeyTextBox.Text = apiKey;
+
+                // Manually trigger loading of fonts instead of waiting for TextChanged event
+                await LoadFontsWithApiKey(apiKey);
             }
         }
 
-        private async void SelectFolder_Click(object sender, RoutedEventArgs e)
+        private async Task LoadFontsWithApiKey(string apiKey)
         {
-            FolderPicker folderPicker = new FolderPicker();
+            if (string.IsNullOrEmpty(apiKey)) return;
+
+            bool isConnected = await Helper.IsNetworkAvailableAsync();
+            if (!isConnected)
+            {
+                webView.Reload();
+                NoInternetImage.Visibility = Visibility.Visible;
+                return;
+            }
+
+            try
+            {
+                // Show loading indicator
+                LoadingProgressRing.IsActive = true;
+                LoadingProgressRing.Visibility = Visibility.Visible;
+
+                FontItems = await _webFontsService.GetWebFontsAsync(apiKey, _isWoff2Selected);
+
+                if (FontItems != null && FontItems.Count != 0)
+                {
+                    // Clear and populate font family dropdown
+                    FontFamilyComboBox.Items.Clear();
+                    foreach (var item in FontItems)
+                    {
+                        FontFamilyComboBox.Items.Add(item.Family);
+                    }
+
+                    // Show format selection options
+                    TtfRadioButton.Visibility = Visibility.Visible;
+                    Woff2RadioButton.Visibility = Visibility.Visible;
+                    FontFamilyComboBox.IsEnabled = true;
+                    MinifyCheckBox.Visibility = Visibility.Visible;
+                    TtfRadioButton.IsChecked = true;
+
+                    if (_webFontsService.FontResponse?.Error == null)
+                    {
+                        webView.Reload();
+                        NoInternetImage.Visibility = Visibility.Collapsed;
+                    }
+                }
+                else if (_webFontsService.FontResponse?.Error != null)
+                {
+                    ContentDialog.Title = "API Error";
+                    ContentDialogText.Text = $"API Error: {_webFontsService.FontResponse.Error.Message}";
+                    await ContentDialog.ShowAsync();
+
+                    _htmlBuilder.DefaultHtml(false, _webFontsService);
+                    webView.Reload();
+                    NoInternetImage.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    await Task.Run(() => _htmlBuilder.DefaultHtml(false, _webFontsService));
+                    webView.Reload();
+                    NoInternetImage.Visibility = Visibility.Visible;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.HandleError("An error occurred while processing your request.", ex);
+
+                ContentDialog.Title = "Error";
+                ContentDialogText.Text = "An error occurred while processing your request. Please try again later.";
+                await ContentDialog.ShowAsync();
+            }
+            finally
+            {
+                // Hide loading indicator
+                LoadingProgressRing.IsActive = false;
+                LoadingProgressRing.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void SelectFolder_Click(object sender, RoutedEventArgs e)
+        {
+            SelectFolderAsync();
+        }
+
+        private async void SelectFolderAsync()
+        {
+            FolderPicker folderPicker = new();
             folderPicker.SuggestedStartLocation = PickerLocationId.Desktop;
             folderPicker.FileTypeFilter.Add("*");
 
@@ -159,7 +241,10 @@ namespace Fonts_Downloader
                 string selectedFontFamily = FontFamilyComboBox.SelectedItem as string;
                 SelectedFontItem = _fontSelector.FontSelection(selectedFontFamily, FontItems, UpdateUIComponents);
 
-                // Enable download button if variants are selected
+                // Clear selections when changing font family
+                FontVariantsListView.SelectedItems.Clear();
+
+                // Update download button state
                 UpdateDownloadButtonState();
             }
             catch (Exception ex)
@@ -217,75 +302,8 @@ namespace Fonts_Downloader
         {
             if (string.IsNullOrEmpty(ApiKeyTextBox.Text)) return;
 
-            bool isConnected = await Helper.IsNetworkAvailableAsync();
-            if (!isConnected)
-            {
-                webView.Reload();
-                NoInternetImage.Visibility = Visibility.Visible;
-                return;
-            }
-
-            try
-            {
-                // Show loading indicator
-                LoadingProgressRing.IsActive = true;
-                LoadingProgressRing.Visibility = Visibility.Visible;
-
-                FontItems = await _webFontsService.GetWebFontsAsync(ApiKeyTextBox.Text, _isWoff2Selected);
-
-                if (FontItems != null && FontItems.Count != 0)
-                {
-                    // Clear and populate font family dropdown
-                    FontFamilyComboBox.Items.Clear();
-                    foreach (var item in FontItems)
-                    {
-                        FontFamilyComboBox.Items.Add(item.Family);
-                    }
-
-                    // Show format selection options
-                    TtfRadioButton.Visibility = Visibility.Visible;
-                    Woff2RadioButton.Visibility = Visibility.Visible;
-                    FontFamilyComboBox.IsEnabled = true;
-                    MinifyCheckBox.Visibility = Visibility.Visible;
-                    TtfRadioButton.IsChecked = true;
-
-                    if (_webFontsService.FontResponse?.Error == null)
-                    {
-                        webView.Reload();
-                        NoInternetImage.Visibility = Visibility.Collapsed;
-                    }
-                }
-                else if (_webFontsService.FontResponse?.Error != null)
-                {
-                    ContentDialog.Title = "API Error";
-                    ContentDialogText.Text = $"API Error: {_webFontsService.FontResponse.Error.Message}";
-                    await ContentDialog.ShowAsync();
-
-                    _htmlBuilder.DefaultHtml(false, _webFontsService);
-                    webView.Reload();
-                    NoInternetImage.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    await Task.Run(() => _htmlBuilder.DefaultHtml(false, _webFontsService));
-                    webView.Reload();
-                    NoInternetImage.Visibility = Visibility.Visible;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.HandleError("An error occurred while processing your request.", ex);
-
-                ContentDialog.Title = "Error";
-                ContentDialogText.Text = "An error occurred while processing your request. Please try again later.";
-                await ContentDialog.ShowAsync();
-            }
-            finally
-            {
-                // Hide loading indicator
-                LoadingProgressRing.IsActive = false;
-                LoadingProgressRing.Visibility = Visibility.Collapsed;
-            }
+            // Use the common method for loading fonts with API key
+            await LoadFontsWithApiKey(ApiKeyTextBox.Text);
         }
 
         private async void DownloadFont_Click(object sender, RoutedEventArgs e)
@@ -330,24 +348,29 @@ namespace Fonts_Downloader
                 // Create a copy of the selected font to modify
                 var selectedFont = SelectedFontItem;
 
-                // Set the selected variants
-                selectedFont.Variants = FontVariantsListView.SelectedItems.Cast<string>().Where(m => !string.IsNullOrEmpty(m)).ToList();
+                var selectedVariants = FontVariantsListView.SelectedItems.Cast<string>()
+                    .Where(m => !string.IsNullOrEmpty(m))
+                    .ToList();
+                selectedFont.Variants = selectedVariants;
 
-                // Get selected subsets
-                var subsets = SubsetsListView.SelectedItems.Cast<string>().ToArray();
+                var selectedSubsets = SubsetsListView.SelectedItems.Cast<string>().ToList();
 
-                // Create the CSS file first
+                // Capture UI values before switching to background thread
+                bool isWoff2 = _isWoff2Selected;
+                bool isMinified = MinifyCheckBox.IsChecked ?? false;
+                string downloadFolder = FolderName;
+
+                // Create the CSS file
                 var cssGenerator = new CssGenerator();
-                await Task.Run(() => cssGenerator.CreateCSS(selectedFont, FolderName, _isWoff2Selected, MinifyCheckBox.IsChecked ?? false, subsets));
+                cssGenerator.CreateCSS(selectedFont, downloadFolder, isWoff2, isMinified, selectedSubsets);
 
-                // Download the font files
+                // Download the font files - This can still be async
                 using (var downloader = new FontFilesDownloader())
                 {
-                    await downloader.DownloadAsync(selectedFont, FolderName, _isWoff2Selected);
+                    await downloader.DownloadAsync(selectedFont, downloadFolder, isWoff2);
                 }
 
-                // Show success message and offer to open the folder
-                await OpenDownloadFolder(FolderName, selectedFont.Family.Replace(" ", ""));
+                await OpenDownloadFolder(downloadFolder, selectedFont.Family.Replace(" ", ""));
             }
             catch (Exception ex)
             {
@@ -383,7 +406,6 @@ namespace Fonts_Downloader
                     var folderToOpen = Path.Combine(folderName, fontFolderName);
                     if (Directory.Exists(folderToOpen))
                     {
-                        // Launch the folder in File Explorer
                         await Launcher.LaunchFolderPathAsync(folderToOpen);
                     }
                     else
@@ -416,7 +438,7 @@ namespace Fonts_Downloader
         {
             try
             {
-                await Launcher.LaunchUriAsync(new Uri("https://github.com/mustafa-shahin/Fonts-Downloader"));
+                await Launcher.LaunchUriAsync(new Uri("https://github.com/mustafa-shahin/Google-Fonts-Downloader-WinUI3"));
             }
             catch (Exception ex)
             {

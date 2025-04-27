@@ -17,7 +17,7 @@ namespace Fonts_Downloader
         {
             httpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromMinutes(5) // Increase timeout for larger downloads
+                Timeout = TimeSpan.FromMinutes(5) 
             };
         }
 
@@ -26,27 +26,52 @@ namespace Fonts_Downloader
             if (selectedFont == null || string.IsNullOrEmpty(folderName))
                 throw new ArgumentException("Font or folder name cannot be null");
 
+            List<Exception> errors = [];
+
             foreach (var variant in selectedFont.Variants.Select(v => v.Replace(" ", "")))
             {
-                var fontFileStyle = Helper.GetFontFileStyles(variant) ?? variant;
-                var propertyValue = selectedFont.Files.GetType().GetProperty($"_{Helper.MapVariant(variant)}")?.GetValue(selectedFont.Files) as string;
-
-                if (!string.IsNullOrEmpty(propertyValue))
+                try
                 {
-                    string fontFolderPath = Path.Combine(folderName, selectedFont.Family.Replace(" ", ""));
-                    Directory.CreateDirectory(fontFolderPath); // Ensure directory exists
+                    var fontFileStyle = Helper.GetFontFileStyles(variant) ?? variant;
 
-                    string fileName = Path.Combine(fontFolderPath, Helper.FontFileName(selectedFont.Family, woff2, variant));
+                    string mappedVariant = Helper.MapVariant(variant);
+                    string propertyName = $"_{mappedVariant}";
 
-                    if (!File.Exists(fileName))
+                    var propertyValue = selectedFont.Files.GetType().GetProperty(propertyName)?.GetValue(selectedFont.Files) as string;
+
+                    if (!string.IsNullOrEmpty(propertyValue))
                     {
-                        await DownloadFileAsync(new Uri(propertyValue), fileName);
+                        string fontFolderPath = Path.Combine(folderName, selectedFont.Family.Replace(" ", ""));
+                        Directory.CreateDirectory(fontFolderPath); 
+
+                        string fileName = Path.Combine(fontFolderPath, Helper.FontFileName(selectedFont.Family, woff2, variant));
+
+                        if (!File.Exists(fileName))
+                        {
+                            await DownloadFileAsync(new Uri(propertyValue), fileName);
+                            await Task.Delay(100);
+                        }
+                    }
+                    else
+                    {
+                        Logger.HandleError($"Download link is empty for variant {variant}", new Exception($"Missing download link for variant {variant}"));
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Logger.HandleError("Download link is empty", new Exception($"Missing download link for variant {variant}"));
+                    errors.Add(ex);
+                    Logger.HandleError($"Error downloading variant {variant}", ex);
                 }
+            }
+
+            if (errors.Count > 0 && errors.Count < selectedFont.Variants.Count)
+            {
+                Logger.HandleError($"Some variants failed to download ({errors.Count} of {selectedFont.Variants.Count})",
+                    new AggregateException("Some downloads failed", errors));
+            }
+            else if (errors.Count == selectedFont.Variants.Count && errors.Count > 0)
+            {
+                throw new AggregateException("All downloads failed", errors);
             }
         }
 
