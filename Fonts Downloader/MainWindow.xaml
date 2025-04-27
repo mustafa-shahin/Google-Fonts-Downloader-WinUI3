@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Fonts_Downloader.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Fonts_Downloader"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Fonts Downloader">
+
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Top Panel -->
+            <RowDefinition Height="*"/>
+            <!-- Main Content -->
+        </Grid.RowDefinitions>
+
+        <!-- Top Panel with API Key and Folder Selection -->
+        <Grid Grid.Row="0" 
+              Background="#212124" 
+              Padding="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="SelectFolderButton" 
+                    Grid.Row="0" 
+                    Grid.Column="0"
+                    Content="Select Folder" 
+                    Click="SelectFolder_Click"
+                    Background="#12a3ff"
+                    Foreground="White"
+                    Height="40" 
+                    Padding="16,8"
+                    CornerRadius="4" 
+                    Margin="0,0,12,12"
+                    Canvas.ZIndex="1"/>
+
+            <TextBox x:Name="SelectedFolderTextBox" 
+                     Grid.Row="0" 
+                     Grid.Column="1" 
+                     Grid.ColumnSpan="2"
+                     PlaceholderText="Selected Folder" 
+                     IsReadOnly="True"
+                     Height="40" 
+                     Margin="0,0,0,12"
+                     Canvas.ZIndex="1"/>
+
+            <TextBox x:Name="ApiKeyTextBox" 
+                     Grid.Row="1" 
+                     Grid.Column="0" 
+                     Grid.ColumnSpan="2"
+                     PlaceholderText="API KEY" 
+                     TextChanged="ApiKeyTextBox_TextChanged"
+                     Height="40" 
+                     Margin="0,0,12,0"
+                     Canvas.ZIndex="1"/>
+
+            <HyperlinkButton x:Name="GitHubLink" 
+                             Grid.Row="1" 
+                             Grid.Column="2"
+                             Content="Code" 
+                             NavigateUri="https://github.com/mustafa-shahin/Fonts-Downloader"
+                             Foreground="White"
+                             Click="GitHubLink_Click"/>
+        </Grid>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel with Controls -->
+            <Grid Grid.Column="0" 
+                  Background="#212124" 
+                  Padding="12" 
+                  Margin="12"
+                  Canvas.ZIndex="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ComboBox x:Name="FontFamilyComboBox" 
+                          Grid.Row="0"
+                          PlaceholderText="Select Font" 
+                          HorizontalAlignment="Stretch"
+                          Margin="0,0,0,12"
+                          SelectionChanged="FontFamilyComboBox_SelectionChanged"
+                          Canvas.ZIndex="3"/>
+
+                <TextBlock x:Name="FontVariantsLabel" 
+                           Grid.Row="1"
+                           Text="Font Variants" 
+                           Foreground="#b9b9b9"
+                           FontSize="16" 
+                           Margin="0,0,0,8"/>
+
+                <ListView x:Name="FontVariantsListView" 
+                          Grid.Row="2"
+                          Background="#282828" 
+                          SelectionMode="Multiple"
+                          Margin="0,0,0,12"
+                          Canvas.ZIndex="3">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Foreground" Value="#b9b9b9"/>
+                            <Setter Property="MinHeight" Value="32"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+
+                <TextBlock x:Name="SubsetsLabel" 
+                           Grid.Row="3"
+                           Text="Subsets" 
+                           Foreground="#b9b9b9"
+                           FontSize="16" 
+                           Margin="0,0,0,8"/>
+
+                <ListView x:Name="SubsetsListView" 
+                          Grid.Row="4"
+                          Background="#282828" 
+                          SelectionMode="Multiple"
+                          SelectionChanged="SubsetsListView_SelectionChanged"
+                          Margin="0,0,0,12"
+                          Canvas.ZIndex="3">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Foreground" Value="#b9b9b9"/>
+                            <Setter Property="MinHeight" Value="32"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+
+                <StackPanel Grid.Row="5" 
+                            Orientation="Vertical" 
+                            Margin="0,0,0,12"
+                            Canvas.ZIndex="3">
+                    <CheckBox x:Name="MinifyCheckBox" 
+                              Content="Minified CSS" 
+                              Foreground="#b9b9b9"
+                              Margin="0,0,0,8"
+                              Checked="MinifyCheckBox_Checked"
+                              Unchecked="MinifyCheckBox_Unchecked"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="Woff2RadioButton" 
+                                  Content="WOFF2" 
+                                  Foreground="#b9b9b9"
+                                  GroupName="FontFormat"
+                                  Margin="0,0,12,0"
+                                  Checked="FontFormat_Checked"/>
+
+                        <RadioButton x:Name="TtfRadioButton" 
+                                     Content="TTF" 
+                                     Foreground="#b9b9b9"
+                                     GroupName="FontFormat"
+                                     IsChecked="True"
+                                     Checked="FontFormat_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Button x:Name="DownloadFontButton" 
+                        Grid.Row="6"
+                        Content="Download Font" 
+                        Background="#12a3ff"
+                        Foreground="White"
+                        Height="48" 
+                        CornerRadius="4" 
+                        HorizontalAlignment="Stretch"
+                        Click="DownloadFont_Click"
+                        Canvas.ZIndex="3"/>
+            </Grid>
+
+            <!-- Right Panel with WebView -->
+            <Grid Grid.Column="1" 
+                  Background="#212124" 
+                  Margin="0,12,12,12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <WebView2 x:Name="webView" 
+                         Grid.Row="0"
+                         Source="ms-appx-web:///Assets/loading.html"/>
+
+                <Image x:Name="NoInternetImage" 
+                       Grid.Row="0"
+                       Source="Assets/no_internet.png" 
+                       Width="300" 
+                       Height="200"
+                       Visibility="Collapsed"
+                       Tapped="NoInternetImage_Tapped"
+                       Canvas.ZIndex="2"/>
+
+                <ProgressRing x:Name="LoadingProgressRing" 
+                              Grid.Row="0"
+                              IsActive="True" 
+                              Width="50" 
+                              Height="50"
+                              Foreground="#12a3ff"
+                              Canvas.ZIndex="2"/>
+            </Grid>
+        </Grid>
+
+        <!-- Content Dialog for Error Messages and Information -->
+        <ContentDialog x:Name="ContentDialog"
+                       Title="Information"
+                       PrimaryButtonText="OK"
+                       DefaultButton="Primary">
+            <TextBlock x:Name="ContentDialogText" 
+                       TextWrapping="Wrap"/>
+        </ContentDialog>
+    </Grid>
+</Window>

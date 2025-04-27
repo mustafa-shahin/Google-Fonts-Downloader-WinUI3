@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Fonts Downloader (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Fonts Downloader (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

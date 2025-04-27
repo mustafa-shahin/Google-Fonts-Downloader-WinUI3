@@ -1,0 +1,52 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Fonts_Downloader
+{
+    public class FontSelector
+    {
+        private string _previousFont;
+        private readonly HtmlBuilder _htmlBuilder;
+
+        public FontSelector(HtmlBuilder htmlBuilder)
+        {
+            _htmlBuilder = htmlBuilder;
+        }
+
+        public Item FontSelection(string selectedFontFamily, IEnumerable<Item> items,
+            Action<string, IEnumerable<string>, IEnumerable<string>> updateUIComponents)
+        {
+            if (string.IsNullOrEmpty(selectedFontFamily) || selectedFontFamily == _previousFont || items == null)
+                return null;
+
+            var selectedFontItem = items.FirstOrDefault(m => m.Family == selectedFontFamily);
+            if (selectedFontItem != null && selectedFontItem.Variants?.Count > 0)
+            {
+                // Process the variants into a more user-friendly format
+                var subsets = selectedFontItem.Subsets?
+                    .Select(m => string.IsNullOrEmpty(m) ? m : char.ToUpper(m[0]) + m[1..])
+                    .ToList() ?? new List<string>();
+
+                selectedFontItem.Variants = selectedFontItem.Variants
+                    .Select(variant =>
+                    {
+                        string mappedVariant = (variant == "regular" || variant == "italic") ? Helper.MapVariant(variant) : variant;
+                        return mappedVariant.EndsWith("italic") && !mappedVariant.Contains(' ') ? mappedVariant.Replace("italic", " italic") : mappedVariant;
+                    })
+                    .OrderBy(variant => variant.EndsWith(" italic")) // Regular weights first, then italics
+                    .ThenBy(variant => variant)
+                    .ToList();
+
+                // Generate HTML preview
+                _htmlBuilder.CreateHtml(selectedFontItem);
+
+                // Update UI components
+                updateUIComponents(selectedFontFamily, subsets, selectedFontItem.Variants);
+            }
+
+            _previousFont = selectedFontFamily;
+            return selectedFontItem;
+        }
+    }
+}
