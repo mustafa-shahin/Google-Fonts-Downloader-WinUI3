@@ -59,7 +59,7 @@ namespace Fonts_Downloader
             return variants.SelectMany(variant =>
                 subsets != null && subsets.Any()
                 ? subsets.Select(subset => GenerateFontFace(fontFamily, variant, includeWoff2, subset))
-                : new[] { GenerateFontFace(fontFamily, variant, includeWoff2) });
+                : [GenerateFontFace(fontFamily, variant, includeWoff2)]);
         }
 
         private string GenerateFontFace(string fontFamily, string fontWeight, bool woff2, string subset = null)
@@ -67,7 +67,6 @@ namespace Fonts_Downloader
             string fontStyle = fontWeight.Contains("italic") ? "italic" : "normal";
             string subsetComment = subset != null ? $"/*{subset}*/\n" : string.Empty;
 
-            // Get proper file name format
             string fontFileName = GenerateCorrectFontFileName(fontFamily, woff2, fontWeight, fontStyle);
 
             string formatAttribute = woff2 ? " format('woff2')" : string.Empty;
@@ -89,28 +88,24 @@ namespace Fonts_Downloader
 
         private string GenerateCorrectFontFileName(string fontFamily, bool woff2, string weight, string fontStyle)
         {
-            // Remove spaces from font family name
             string sanitizedFontFamily = fontFamily.Replace(" ", "");
 
-            // Get the file extension
             string extension = woff2 ? "woff2" : "ttf";
 
-            // Map the weight number to a name
+
             string weightNumber = Helper.MapVariant(weight).Replace("italic", "");
 
-            // Get the appropriate weight name (Thin, Light, Regular, Bold, etc.)
             if (!FontWeightNames.TryGetValue(weightNumber, out string weightName))
             {
-                weightName = "Regular"; // Default to Regular if not found
+                weightName = "Regular"; 
             }
 
-            // Create filename in format: FontName-WeightName.ttf or FontName-Italic-WeightName.ttf
+          
             return fontStyle == "italic"
                 ? $"{sanitizedFontFamily}-{weightName}Italic.{extension}"
                 : $"{sanitizedFontFamily}-{weightName}.{extension}";
         }
 
-        // Dictionary mapping weight numbers to their names
         private static readonly Dictionary<string, string> FontWeightNames = new()
         {
             ["100"] = "Thin",
@@ -125,10 +120,9 @@ namespace Fonts_Downloader
         };
     }
 
-    // Helper class for generating CSS
     public class CssStyle
     {
-        public Dictionary<string, Dictionary<string, string>> Properties { get; set; } = new();
+        public Dictionary<string, Dictionary<string, string>> Properties { get; set; } = [];
 
         public string Render()
         {

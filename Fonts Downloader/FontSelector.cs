@@ -14,7 +14,7 @@ namespace Fonts_Downloader
             _htmlBuilder = htmlBuilder;
         }
 
-        public Item FontSelection(string selectedFontFamily, IEnumerable<Item> items,
+        public Item? FontSelection(string selectedFontFamily, IEnumerable<Item> items,
             Action<string, IEnumerable<string>, IEnumerable<string>> updateUIComponents)
         {
             if (string.IsNullOrEmpty(selectedFontFamily) || selectedFontFamily == _previousFont || items == null)

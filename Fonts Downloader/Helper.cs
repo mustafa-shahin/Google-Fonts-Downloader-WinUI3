@@ -53,10 +53,8 @@ namespace Fonts_Downloader
             // Check if weight contains italic
             bool isItalic = weight.Contains("italic");
 
-            // Get numeric weight (remove italic and clean up)
             string numericWeight = MapVariant(weight).Replace(" italic", "").Replace("italic", "");
 
-            // Get weight style name (like Regular, Bold, etc.)
             string weightName = "Regular";
             if (FontWeights.TryGetValue(numericWeight, out string value))
             {
@@ -80,7 +78,6 @@ namespace Fonts_Downloader
         {
             try
             {
-                // First check through network interfaces
                 NetworkInterface[] networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (NetworkInterface networkInterface in networkInterfaces)
                 {
@@ -93,7 +90,6 @@ namespace Fonts_Downloader
                     }
                 }
 
-                // Then do a ping test
                 using var ping = new Ping();
                 var result = await ping.SendPingAsync("www.google.com", 3000); // Use a 3 second timeout
                 return (result.Status == IPStatus.Success);
@@ -105,11 +101,10 @@ namespace Fonts_Downloader
             }
         }
 
-        public static string GetAPIKey()
+        public static string? GetAPIKey()
         {
             try
             {
-                // Get the project root directory 
                 string projectRoot = Directory.GetCurrentDirectory();
                 string configFile = Path.Combine(projectRoot, "appsettings.json");
 
@@ -123,7 +118,6 @@ namespace Fonts_Downloader
 
                 if (!File.Exists(configFile))
                 {
-                    // Log that the file wasn't found
                     Logger.HandleError("appsettings.json not found", new FileNotFoundException("Could not find appsettings.json"));
                     return null;
                 }
